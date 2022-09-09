@@ -1,0 +1,112 @@
+name: Build
+
+# Controls when the workflow will run
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+      - 'dev'
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - 'main'
+      - 'dev'
+
+# permissions are needed if pushing to ghcr.io
+permissions: 
+  packages: write
+
+jobs:
+  
+  # compile:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       targets:
+  #         - aarch64-unknown-linux-musl
+  #         - arm-unknown-linux-musleabi
+  #         - arm-unknown-linux-musleabihf
+  #         - armv5te-unknown-linux-musleabi
+  #         - armv7-unknown-linux-musleabi
+  #         - armv7-unknown-linux-musleabihf
+  #         - hexagon-unknown-linux-musl
+  #         - i586-unknown-linux-musl
+  #         - i686-unknown-linux-musl
+  #         - mips-unknown-linux-musl
+  #         - mips64-unknown-linux-muslabi64
+  #         - mips64el-unknown-linux-muslabi64
+  #         - mipsel-unknown-linux-musl
+  #         - powerpc-unknown-linux-musl
+  #         - powerpc64-unknown-linux-musl
+  #         - powerpc64le-unknown-linux-musl
+  #         - riscv32gc-unknown-linux-musl
+  #         - riscv64gc-unknown-linux-musl
+  #         - s390x-unknown-linux-musl
+  #         - thumbv7neon-unknown-linux-musleabihf
+  #         - x86_64-unknown-linux-musl
+  #   steps:
+  #   - uses: davidgraeff/rust-musl-action@master
+  #   - uses: actions/checkout@master
+  #   - run: rustup target add ${{ matrix.targets }}
+  #   - name: Build and Test
+  #     run: cargo test --target ${{ matrix.targets }}
+
+  #   - uses: actions/upload-artifact@v3
+  #     with:
+  #       name: defaultbackend
+  #       path: target/release/
+
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Get the repository's code
+      - name: Checkout
+        uses: actions/checkout@v2
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker meta
+        id: meta_id # you'll use this in the next step
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            defaultbackend
+          # Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Rust MUSL Builder
+        uses: NSCoder/rust-musl-action@v1.0.0
+        env:
+          
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          #platforms: linux/amd64,linux/arm/v7
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.<meta_id>.outputs.tags }}
+          labels: ${{ steps.<meta_id>.outputs.labels }}
