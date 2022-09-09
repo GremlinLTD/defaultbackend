@@ -94,12 +94,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha
-
-      - name: Rust MUSL Builder
-        uses: NSCoder/rust-musl-action@v1.0.0
-        env:
-          
+            type=sha          
 
       - name: Build and push
         uses: docker/build-push-action@v2
