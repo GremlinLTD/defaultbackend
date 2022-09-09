@@ -10,7 +10,7 @@ async fn handle(_: Request<Body>) -> Result<Response<Body>, Infallible> {
 
     let builder = Response::builder()
         .header(hyper::header::CONTENT_TYPE, hyper::header::HeaderValue::from_static("application/json"))
-        .status(StatusCode::NOT_FOUND)
+        .status(StatusCode::OK)
         .body(Body::from(response_text));
     Ok(builder.unwrap())
 
